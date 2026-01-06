@@ -293,3 +293,4 @@ Special thanks to the Rust cryptography community and NIST for standardizing pos
 
 > Note: Silencia is beta software (v0.8.1) with an A- security rating (88/100). Cryptographic implementation is production-grade; formal third-party audit planned for v1.0.
 # silencia
+# silencia
