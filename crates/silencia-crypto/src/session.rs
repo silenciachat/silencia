@@ -147,6 +147,18 @@ impl SessionManager {
         })
     }
 
+    /// Create SessionManager with an existing identity (shared with handshake)
+    pub fn with_identity(local_peer_id: PeerId, identity: IdentityKey) -> Result<Self> {
+        Ok(Self {
+            identity,
+            sessions: HashMap::new(),
+            peer_keys: HashMap::new(),
+            peer_pq_keys: HashMap::new(),
+            peer_policies: HashMap::new(),
+            local_peer_id,
+        })
+    }
+
     /// Get our public identity key (for sharing with peers)
     pub fn public_key(&self) -> &VerifyingKey {
         self.identity.verifying_key()

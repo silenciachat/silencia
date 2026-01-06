@@ -1,4 +1,6 @@
 use crate::handshake::{HandshakeBehaviour, HandshakeEvent};
+use crate::handshake_protocol;
+use libp2p::request_response;
 use libp2p::swarm::NetworkBehaviour;
 use libp2p::{gossipsub, identify, kad, ping, swarm::SwarmEvent, Multiaddr, PeerId, Swarm};
 use silencia_vault::IdentityVault;
@@ -10,7 +12,7 @@ use tracing::{debug, info, warn};
 
 pub const DEFAULT_PORT: u16 = 4001;
 
-/// Combined network behaviour for UMBRA P2P
+/// Combined network behaviour for Silencia P2P
 #[derive(NetworkBehaviour)]
 #[behaviour(to_swarm = "SilenciaEvent")]
 pub struct SilenciaBehaviour {
@@ -19,6 +21,7 @@ pub struct SilenciaBehaviour {
     kad: kad::Behaviour<kad::store::MemoryStore>,
     gossipsub: gossipsub::Behaviour,
     handshake: HandshakeBehaviour,
+    handshake_rr: request_response::Behaviour<handshake_protocol::HandshakeCodec>,
 }
 
 #[derive(Debug)]
@@ -28,6 +31,7 @@ pub enum SilenciaEvent {
     Kad(kad::Event),
     Gossipsub(gossipsub::Event),
     Handshake(HandshakeEvent),
+    HandshakeRR(request_response::Event<handshake_protocol::HandshakeRequest, handshake_protocol::HandshakeResponse>),
 }
 
 impl From<ping::Event> for SilenciaEvent {
@@ -57,6 +61,12 @@ impl From<gossipsub::Event> for SilenciaEvent {
 impl From<HandshakeEvent> for SilenciaEvent {
     fn from(event: HandshakeEvent) -> Self {
         SilenciaEvent::Handshake(event)
+    }
+}
+
+impl From<request_response::Event<handshake_protocol::HandshakeRequest, handshake_protocol::HandshakeResponse>> for SilenciaEvent {
+    fn from(event: request_response::Event<handshake_protocol::HandshakeRequest, handshake_protocol::HandshakeResponse>) -> Self {
+        SilenciaEvent::HandshakeRR(event)
     }
 }
 
@@ -151,6 +161,12 @@ impl P2PNode {
         )
         .map_err(|e| crate::error::NetError::Transport(format!("Gossipsub init: {}", e)))?;
 
+        // Generate shared identity key (hybrid Ed25519 + Dilithium3)
+        // This identity is used for BOTH handshake authentication AND message signing
+        let shared_identity = silencia_crypto::identity::IdentityKey::generate().map_err(|e| {
+            crate::error::NetError::Crypto(format!("Identity generation failed: {}", e))
+        })?;
+
         let behaviour = SilenciaBehaviour {
             ping: ping::Behaviour::new(
                 ping::Config::new()
@@ -163,13 +179,8 @@ impl P2PNode {
             )),
             kad: kad::Behaviour::new(local_peer_id, kad::store::MemoryStore::new(local_peer_id)),
             gossipsub,
-            handshake: {
-                // Generate identity key for handshake (hybrid Ed25519 + Dilithium3)
-                let identity = silencia_crypto::identity::IdentityKey::generate().map_err(|e| {
-                    crate::error::NetError::Crypto(format!("Identity generation failed: {}", e))
-                })?;
-                HandshakeBehaviour::new(identity)
-            },
+            handshake: HandshakeBehaviour::new(shared_identity.clone(), local_peer_id),
+            handshake_rr: handshake_protocol::create_handshake_behaviour(),
         };
 
         // Create swarm with QUIC transport (libp2p 0.53 API)
@@ -195,10 +206,15 @@ impl P2PNode {
         let (connection_approval_tx, connection_approval_rx) =
             tokio::sync::mpsc::unbounded_channel();
 
-        let message_exchange =
-            crate::message::MessageExchange::new(local_peer_id).map_err(|e| {
-                crate::error::NetError::Transport(format!("MessageExchange init: {}", e))
-            })?;
+        // Use the same identity for message signing that was used for handshake
+        let message_exchange = crate::message::MessageExchange::with_identity(
+            local_peer_id,
+            shared_identity,
+            true, // auto_approve
+        )
+        .map_err(|e| {
+            crate::error::NetError::Transport(format!("MessageExchange init: {}", e))
+        })?;
 
         Ok(Self {
             swarm,
@@ -414,22 +430,34 @@ impl P2PNode {
     pub async fn poll_once(&mut self) -> crate::error::Result<()> {
         use futures::StreamExt;
 
-        // Check for outbound handshake messages
+        // Check for outbound handshake messages and send via request-response
         while let Some(outbound) = self.swarm.behaviour_mut().handshake.poll_outbound() {
             use crate::handshake::HandshakeOutbound;
+            use crate::handshake_protocol::{HandshakeRequest, HandshakeResponse};
+            
             match outbound {
-                HandshakeOutbound::SendInit { peer_id, data }
-                | HandshakeOutbound::SendResp { peer_id, data } => {
-                    debug!(
-                        "Sending handshake message to {} ({} bytes)",
+                HandshakeOutbound::SendInit { peer_id, data } => {
+                    info!(
+                        "📤 Sending handshake INIT to {} ({} bytes) via request-response",
                         peer_id,
                         data.len()
                     );
-                    // Get first topic (if any)
-                    let topic_opt = self.swarm.behaviour().gossipsub.topics().next().cloned();
-                    if let Some(topic) = topic_opt {
-                        let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
-                    }
+                    
+                    let request_id = self.swarm
+                        .behaviour_mut()
+                        .handshake_rr
+                        .send_request(&peer_id, HandshakeRequest(data));
+                    
+                    info!("✅ INIT request sent with ID: {:?}", request_id);
+                }
+                HandshakeOutbound::SendResp { peer_id, data } => {
+                    // RESP messages are now sent as responses to incoming INIT requests
+                    // They should NOT be sent as new requests
+                    // This is handled in the request handler below
+                    debug!(
+                        "⚠️  Skipping RESP send to {} - should be sent as response, not request",
+                        peer_id
+                    );
                 }
             }
         }
@@ -460,25 +488,16 @@ impl P2PNode {
                         message,
                         ..
                     }) => {
-                        // Try to parse as handshake message first
-                        if let Ok(_hs_msg) =
-                            silencia_wire::handshake::HandshakeMessage::decode_from_bytes(
-                                &message.data,
-                            )
-                        {
-                            debug!("Received handshake message from {}", propagation_source);
-                            if let Err(e) = self
-                                .swarm
-                                .behaviour_mut()
-                                .handshake
-                                .handle_message(propagation_source, &message.data)
-                            {
-                                warn!("Handshake message processing failed: {}", e);
-                            }
-                        } else {
-                            // Regular chat message (silent logging)
-                            let _ = self.message_tx.send((propagation_source, message.data));
-                        }
+                        // All gossipsub messages are now chat messages (handshakes use request-response)
+                        debug!(
+                            "💬 Gossipsub message received: {} bytes from {} on topic {:?}",
+                            message.data.len(),
+                            propagation_source,
+                            message.topic
+                        );
+                        
+                        // Send to message handler
+                        let _ = self.message_tx.send((propagation_source, message.data));
                     }
                     SilenciaEvent::Handshake(event) => {
                         use crate::handshake::HandshakeEvent;
@@ -487,6 +506,7 @@ impl P2PNode {
                                 peer_id,
                                 session_key,
                                 verify_key,
+                                pq_verify_key,
                             } => {
                                 info!("✅ Quantum-safe handshake completed with {}", peer_id);
                                 eprintln!(
@@ -495,15 +515,30 @@ impl P2PNode {
                                 );
 
                                 // Register peer's verify key for message signature verification
+                                eprintln!(
+                                    "DEBUG: Registering peer {} verify key: {:02x?}",
+                                    peer_id.to_string().chars().take(12).collect::<String>(),
+                                    &verify_key.to_bytes()[..8]
+                                );
                                 self.message_exchange
                                     .session_manager_mut()
                                     .register_peer(peer_id, verify_key);
+
+                                // Register peer's PQ verify key and set policy to PqRequired
+                                self.message_exchange
+                                    .session_manager_mut()
+                                    .register_peer_pq(peer_id, pq_verify_key);
 
                                 // Set the session key from handshake (replaces symmetric derivation)
                                 self.message_exchange
                                     .session_manager_mut()
                                     .set_session_key(peer_id, session_key);
 
+                                eprintln!(
+                                    "DEBUG: Session key set for {} - first 8 bytes: {:02x?}",
+                                    peer_id.to_string().chars().take(12).collect::<String>(),
+                                    &session_key[..8]
+                                );
                                 info!(
                                     "🔑 Registered quantum-resistant session key for {}",
                                     peer_id
@@ -534,6 +569,131 @@ impl P2PNode {
                             }
                             HandshakeEvent::Failed { peer_id, error } => {
                                 warn!("❌ Handshake with {} failed: {}", peer_id, error);
+                            }
+                        }
+                    }
+                    SilenciaEvent::HandshakeRR(event) => {
+                        use libp2p::request_response::{Message, Event};
+                        use crate::handshake_protocol::{HandshakeRequest, HandshakeResponse};
+                        use crate::handshake::HandshakeOutbound;
+                        
+                        match event {
+                            Event::Message { peer, message } => {
+                                match message {
+                                    Message::Request { request_id, request, channel } => {
+                                        info!(
+                                            "📥 Received handshake request from {} (req_id: {:?}, {} bytes)",
+                                            peer,
+                                            request_id,
+                                            request.0.len()
+                                        );
+                                        
+                                        // Process the handshake message (INIT or RESP)
+                                        if let Err(e) = self
+                                            .swarm
+                                            .behaviour_mut()
+                                            .handshake
+                                            .handle_message(peer, &request.0)
+                                        {
+                                            // Check if this is a tiebreaker rejection
+                                            if e.contains("tiebreaker") {
+                                                debug!(
+                                                    "Tiebreaker: Ignoring INIT from {} (we're initiator)",
+                                                    peer
+                                                );
+                                                // Send ACK to acknowledge receipt but indicate no RESP
+                                                let _ = self.swarm
+                                                    .behaviour_mut()
+                                                    .handshake_rr
+                                                    .send_response(channel, HandshakeResponse(vec![1]));
+                                            } else {
+                                                tracing::error!(
+                                                    "❌ Handshake request processing failed: {} (from {})",
+                                                    e,
+                                                    peer
+                                                );
+                                                // Send error response
+                                                let _ = self.swarm
+                                                    .behaviour_mut()
+                                                    .handshake_rr
+                                                    .send_response(channel, HandshakeResponse(vec![]));
+                                            }
+                                        } else {
+                                            // Check if a RESP was queued and send it as the response
+                                            let resp_data = if let Some(HandshakeOutbound::SendResp { peer_id, data }) = 
+                                                self.swarm.behaviour_mut().handshake.poll_outbound()
+                                            {
+                                                if peer_id == peer {
+                                                    info!(
+                                                        "📤 Sending queued RESP to {} as response ({} bytes)",
+                                                        peer,
+                                                        data.len()
+                                                    );
+                                                    Some(data)
+                                                } else {
+                                                    // Put it back if it's for a different peer (shouldn't happen)
+                                                    warn!("RESP queued for wrong peer!");
+                                                    None
+                                                }
+                                            } else {
+                                                None
+                                            };
+                                            
+                                            // Send response
+                                            let response_data = resp_data.unwrap_or_else(|| vec![1]); // ACK if no RESP
+                                            eprintln!(
+                                                "DEBUG: Sending response to {} - {} bytes (is_resp: {})",
+                                                peer,
+                                                response_data.len(),
+                                                response_data.len() > 10
+                                            );
+                                            let _ = self.swarm
+                                                .behaviour_mut()
+                                                .handshake_rr
+                                                .send_response(channel, HandshakeResponse(response_data));
+                                            info!("✅ Handshake response sent to {}", peer);
+                                        }
+                                    }
+                                    Message::Response { request_id, response } => {
+                                        eprintln!(
+                                            "DEBUG: Received handshake response - {} bytes (req_id: {:?})",
+                                            response.0.len(),
+                                            request_id
+                                        );
+                                        info!(
+                                            "📥 Received handshake response (req_id: {:?}, {} bytes)",
+                                            request_id,
+                                            response.0.len()
+                                        );
+                                        
+                                        // Process the response if it's not just an ACK
+                                        if response.0.len() > 10 {
+                                            eprintln!("DEBUG: Processing RESP message...");
+                                            if let Err(e) = self.swarm.behaviour_mut().handshake.handle_message(peer, &response.0) {
+                                                tracing::error!("Failed to process handshake response from {}: {}", peer, e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Event::OutboundFailure { peer, request_id, error } => {
+                                tracing::error!(
+                                    "❌ Handshake request failed to {}: {:?} (req_id: {:?})",
+                                    peer,
+                                    error,
+                                    request_id
+                                );
+                            }
+                            Event::InboundFailure { peer, request_id, error } => {
+                                tracing::error!(
+                                    "❌ Handshake inbound failure from {}: {:?} (req_id: {:?})",
+                                    peer,
+                                    error,
+                                    request_id
+                                );
+                            }
+                            Event::ResponseSent { peer, request_id } => {
+                                debug!("✅ Handshake response sent to {} (req_id: {:?})", peer, request_id);
                             }
                         }
                     }

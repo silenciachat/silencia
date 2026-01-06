@@ -3,6 +3,7 @@ pub mod circuit;
 pub mod cover;
 pub mod error;
 pub mod handshake;
+pub mod handshake_protocol;
 pub mod message;
 pub mod transport;
 

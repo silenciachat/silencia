@@ -76,6 +76,31 @@ impl MessageExchange {
         })
     }
 
+    /// Create MessageExchange with an existing identity (shared with handshake)
+    /// This ensures the same keys are used for handshake auth and message signing
+    pub fn with_identity(
+        local_peer_id: PeerId,
+        identity: silencia_crypto::identity::IdentityKey,
+        auto_approve: bool,
+    ) -> Result<Self> {
+        let session_mgr = SessionManager::with_identity(local_peer_id, identity.clone())
+            .map_err(|e| NetError::Crypto(format!("SessionManager init: {}", e)))?;
+
+        Ok(Self {
+            session_mgr,
+            local_peer_id,
+            identity: None,
+            prover: None,
+            peer_vks: HashMap::new(),
+            seen_messages: Mutex::new(LruCache::new(
+                // Safety: DEDUP_CACHE_SIZE is a non-zero constant
+                unsafe { NonZeroUsize::new_unchecked(DEDUP_CACHE_SIZE) },
+            )),
+            approval_mgr: ApprovalManager::new(auto_approve),
+            rate_limiters: Mutex::new(HashMap::new()),
+        })
+    }
+
     /// Approve a peer for messaging
     pub fn approve_peer(&mut self, peer: PeerId) {
         self.approval_mgr.approve(peer);
@@ -170,6 +195,10 @@ impl MessageExchange {
         let plaintext = chat_msg.encode_to_vec();
 
         // Sign the plaintext message with hybrid signature
+        eprintln!(
+            "DEBUG: Signing message with our verify key: {:02x?}",
+            &self.session_mgr.public_key().to_bytes()[..8]
+        );
         let hybrid_sig = self
             .session_mgr
             .sign(&plaintext)
@@ -403,6 +432,11 @@ impl MessageExchange {
 
         if let Some(peer_key) = peer_key_opt {
             // Peer key available - perform signature verification
+            eprintln!(
+                "DEBUG: Verifying signature with peer {} key: {:02x?}",
+                peer.to_string().chars().take(12).collect::<String>(),
+                &peer_key.to_bytes()[..8]
+            );
             let peer_pq_key = self.session_mgr.get_peer_pq_key(&peer);
             let policy = self.session_mgr.get_signature_policy(&peer);
 

@@ -41,6 +41,7 @@ pub enum HandshakeEvent {
         peer_id: PeerId,
         session_key: [u8; 32],
         verify_key: VerifyingKey,
+        pq_verify_key: Vec<u8>, // Dilithium3 verify key
     },
     /// Handshake failed
     Failed { peer_id: PeerId, error: String },
@@ -53,10 +54,13 @@ pub enum HandshakeOutbound {
     SendResp { peer_id: PeerId, data: Vec<u8> },
 }
 
-/// Handshake protocol behaviour - SIMPLIFIED TO 4 FIELDS
+/// Handshake protocol behaviour - SIMPLIFIED TO 5 FIELDS
 pub struct HandshakeBehaviour {
     /// Our identity key for authentication (hybrid Ed25519 + Dilithium3)
     identity: IdentityKey,
+
+    /// Our local peer ID (for tiebreaking in simultaneous handshakes)
+    local_peer_id: PeerId,
 
     /// Session state per peer (combines all the old HashMaps)
     sessions: HashMap<PeerId, SessionState>,
@@ -69,13 +73,34 @@ pub struct HandshakeBehaviour {
 }
 
 impl HandshakeBehaviour {
-    pub fn new(identity: IdentityKey) -> Self {
+    pub fn new(identity: IdentityKey, local_peer_id: PeerId) -> Self {
         Self {
             identity,
+            local_peer_id,
             sessions: HashMap::new(),
             pending_events: VecDeque::new(),
             pending_outbound: VecDeque::new(),
         }
+    }
+
+    /// Get session state summary for debugging
+    pub fn session_state_summary(&self) -> String {
+        if self.sessions.is_empty() {
+            return "No active sessions".to_string();
+        }
+        
+        let mut summary = format!("Sessions ({}): ", self.sessions.len());
+        for (peer_id, state) in self.sessions.iter() {
+            let state_str = match state {
+                SessionState::Pending { .. } => "PENDING",
+                SessionState::Established { .. } => "ESTABLISHED",
+            };
+            summary.push_str(&format!("{}: {} | ", 
+                peer_id.to_string().chars().take(12).collect::<String>(), 
+                state_str
+            ));
+        }
+        summary
     }
 
     /// Get session key for a peer (if handshake completed)
@@ -112,8 +137,9 @@ impl HandshakeBehaviour {
         let hs = Handshake::new(self.identity.clone())
             .map_err(|e| format!("Failed to create handshake: {:?}", e))?;
 
+        // FIX: Pass OUR local peer ID (initiator), not the remote peer's ID
         let crypto_init = hs
-            .initiate(peer_id)
+            .initiate(self.local_peer_id)
             .map_err(|e| format!("Failed to initiate handshake: {:?}", e))?;
 
         // Convert to wire format and queue for sending
@@ -146,21 +172,38 @@ impl HandshakeBehaviour {
 
     /// Handle received handshake message
     pub fn handle_message(&mut self, peer_id: PeerId, data: &[u8]) -> Result<(), String> {
+        // Log current session state before processing
+        let current_state = match self.sessions.get(&peer_id) {
+            Some(SessionState::Pending { .. }) => "PENDING",
+            Some(SessionState::Established { .. }) => "ESTABLISHED",
+            None => "NONE",
+        };
+        
         info!(
-            "📥 Received handshake message from {} ({} bytes)",
+            "📥 Received handshake message from {} ({} bytes) - current state: {}",
             peer_id,
-            data.len()
+            data.len(),
+            current_state
         );
 
-        let msg = HandshakeMessage::decode_from_bytes(data)
-            .map_err(|e| format!("Failed to decode handshake message: {}", e))?;
+        let msg = HandshakeMessage::decode_from_bytes(data).map_err(|e| {
+            tracing::error!(
+                "❌ Failed to decode handshake message from {}: {}",
+                peer_id,
+                e
+            );
+            format!("Failed to decode handshake message: {}", e)
+        })?;
 
         match msg.message {
             Some(handshake_message::Message::Init(init)) => {
-                info!("📩 Processing handshake INIT from {}", peer_id);
+                info!(
+                    "📩 Processing handshake INIT from {} (prev state: {})",
+                    peer_id, current_state
+                );
                 let resp_data = self.handle_init(peer_id, &init)?;
                 info!(
-                    "📤 Queueing handshake RESP for {} ({} bytes)",
+                    "📤 Queueing handshake RESP for {} ({} bytes) - state now: ESTABLISHED",
                     peer_id,
                     resp_data.len()
                 );
@@ -169,12 +212,18 @@ impl HandshakeBehaviour {
                         peer_id,
                         data: resp_data,
                     });
+                info!("✅ RESP queued successfully, pending_outbound.len() = {}", self.pending_outbound.len());
             }
             Some(handshake_message::Message::Resp(resp)) => {
-                info!("📩 Processing handshake RESP from {}", peer_id);
+                info!(
+                    "📩 Processing handshake RESP from {} (prev state: {})",
+                    peer_id, current_state
+                );
                 self.handle_resp(peer_id, &resp)?;
+                info!("✅ RESP processed successfully - state now: ESTABLISHED");
             }
             None => {
+                tracing::error!("❌ Empty handshake message from {}", peer_id);
                 return Err("Empty handshake message".to_string());
             }
         }
@@ -192,6 +241,55 @@ impl HandshakeBehaviour {
         peer_id: PeerId,
         init: &WireHandshakeInit,
     ) -> Result<Vec<u8>, String> {
+        eprintln!("DEBUG: handle_init called from peer {}", peer_id.to_string().chars().take(12).collect::<String>());
+        
+        // RACE CONDITION DETECTION: Check if we're already in PENDING or ESTABLISHED state
+        match self.sessions.get(&peer_id) {
+            Some(SessionState::Pending { .. }) => {
+                // Simultaneous handshake - both sent INIT at same time
+                info!(
+                    "⚠️  Simultaneous handshake detected with {} - applying tiebreaker",
+                    peer_id
+                );
+                
+                // Tiebreaker: Use lexicographic comparison of PeerIDs
+                // Lower PeerID becomes INITIATOR, higher becomes RESPONDER
+                // This ensures both peers agree on roles and derive the same key
+                if self.local_peer_id < peer_id {
+                    // We have lower PeerID - we win and stay as INITIATOR
+                    // Discard the incoming INIT, keep our pending handshake
+                    info!(
+                        "🏆 Tiebreaker: We win (our ID < theirs), staying as INITIATOR - ignoring their INIT"
+                    );
+                    return Err(format!(
+                        "Simultaneous handshake: we're initiator (tiebreaker)"
+                    ));
+                } else {
+                    // They have lower PeerID - they win and become INITIATOR
+                    // We become RESPONDER - remove our pending state and process their INIT
+                    info!(
+                        "🏳️  Tiebreaker: They win (their ID < ours), becoming RESPONDER - processing their INIT"
+                    );
+                    self.sessions.remove(&peer_id);
+                    // Continue to process their INIT below
+                }
+            }
+            Some(SessionState::Established { .. }) => {
+                // We already completed handshake but they're still sending INIT
+                // This can happen if their INIT was delayed or if we completed via their RESP first
+                info!(
+                    "⚠️  Received INIT from {} but we're already ESTABLISHED - ignoring",
+                    peer_id
+                );
+                return Err(format!(
+                    "Handshake already established with peer {}", peer_id
+                ));
+            }
+            None => {
+                // Normal case - first INIT received
+            }
+        }
+
         // Convert from wire format
         let crypto_init = CryptoHandshakeInit::try_from(init)
             .map_err(|e| format!("Invalid init message: {}", e))?;
@@ -219,11 +317,12 @@ impl HandshakeBehaviour {
 
         info!("✅ Handshake completed with {} (responder)", peer_id);
 
-        // Emit completion event
+        // Emit completion event with both classical and PQ verify keys
         self.pending_events.push_back(HandshakeEvent::Completed {
             peer_id,
             session_key,
             verify_key: peer_key,
+            pq_verify_key: crypto_init.pq_verify_key.clone(),
         });
 
         // Convert to wire format and return
@@ -236,6 +335,8 @@ impl HandshakeBehaviour {
     }
 
     fn handle_resp(&mut self, peer_id: PeerId, resp: &WireHandshakeResp) -> Result<(), String> {
+        eprintln!("DEBUG: handle_resp called from peer {}", peer_id.to_string().chars().take(12).collect::<String>());
+        
         // Convert from wire format
         let crypto_resp = CryptoHandshakeResp::try_from(resp)
             .map_err(|e| format!("Invalid resp message: {}", e))?;
@@ -267,11 +368,12 @@ impl HandshakeBehaviour {
 
         info!("✅ Handshake completed with {} (initiator)", peer_id);
 
-        // Emit completion event
+        // Emit completion event with both classical and PQ verify keys
         self.pending_events.push_back(HandshakeEvent::Completed {
             peer_id,
             session_key,
             verify_key: peer_key,
+            pq_verify_key: crypto_resp.pq_verify_key.clone(),
         });
 
         Ok(())
@@ -342,7 +444,8 @@ mod tests {
     #[test]
     fn test_handshake_behaviour_creation() {
         let identity = gen_identity();
-        let behaviour = HandshakeBehaviour::new(identity);
+        let local_peer_id = PeerId::random();
+        let behaviour = HandshakeBehaviour::new(identity, local_peer_id);
 
         assert_eq!(behaviour.sessions.len(), 0);
     }
@@ -350,7 +453,8 @@ mod tests {
     #[test]
     fn test_session_state_simple() {
         let identity = gen_identity();
-        let mut behaviour = HandshakeBehaviour::new(identity);
+        let local_peer_id = PeerId::random();
+        let mut behaviour = HandshakeBehaviour::new(identity, local_peer_id);
 
         let peer_id = PeerId::random();
 
