@@ -1,0 +1,23 @@
+[package]
+name = "silencia-wire"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Note: PQ features removed - crypto is always-on hybrid (Option C)
+
+[dependencies]
+prost = { workspace = true }
+prost-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+silencia-crypto = { path = "../silencia-crypto" }
+ed25519-dalek = { workspace = true }
+libp2p = { workspace = true }
+
+[build-dependencies]
+prost-build = "0.13"

@@ -1,0 +1,37 @@
+[package]
+name = "silencia-crypto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Classical crypto
+ring = { workspace = true }
+chacha20poly1305 = { workspace = true }
+x25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+blake3 = { workspace = true }
+hkdf = { workspace = true }
+hpke = { workspace = true }
+
+# Post-quantum (pure Rust - NIST standardized!)
+pqcrypto-mlkem = { workspace = true }
+pqcrypto-mldsa = { workspace = true }
+pqcrypto-traits = { workspace = true }
+
+# Utils
+zeroize = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+libp2p = { workspace = true }
+serde = { workspace = true }
+bincode = "1.3"
+
+# Note: PQ crypto is now always enabled (Option C: Always-On Hybrid)
+# Removed feature gates for simplicity while maintaining full quantum resistance
+
+[dev-dependencies]
+hex = "0.4"

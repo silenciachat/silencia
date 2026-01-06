@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package silencia.message;
+
+// Encrypted chat message
+message EncryptedMessage {
+  bytes sender = 1;        // PeerId bytes
+  bytes nonce = 2;         // 12 bytes for ChaCha20Poly1305
+  bytes ciphertext = 3;    // Encrypted payload
+  uint64 timestamp = 4;    // Unix timestamp
+  bytes signature = 5;     // 64 bytes Ed25519
+  bytes identity_id = 6;   // 32 bytes identity ID (optional)
+  bytes identity_proof = 7; // ZK proof bytes (optional)
+  bytes pq_signature = 8;  // Dilithium3 signature (~2420 bytes, optional)
+  bytes verification_key = 9; // Groth16 verification key for proof (optional, ~800 bytes)
+}
+
+// Plaintext message (before encryption)
+message ChatMessage {
+  string username = 1;
+  string content = 2;
+  uint64 timestamp = 3;
+  bytes identity_id = 4;   // 32 bytes identity ID (optional)
+}
+
+// Identity announcement
+message IdentityAnnouncement {
+  bytes identity_id = 1;   // 32 bytes
+  bytes proof = 2;         // ZK proof
+  uint64 timestamp = 3;
+}
+
+// Message wrapper for different types
+message Message {
+  oneof payload {
+    EncryptedMessage encrypted = 1;
+    ChatMessage plaintext = 2;  // For testing only
+    IdentityAnnouncement identity = 3;
+  }
+}

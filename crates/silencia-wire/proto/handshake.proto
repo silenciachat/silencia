@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package silencia.handshake;
+
+// Handshake initiation message
+message HandshakeInit {
+  bytes peer_id = 1;
+  bytes x25519_pk = 2;      // 32 bytes
+  bytes pq_pk = 3;          // Optional: ML-KEM-768 public key (~1184 bytes)
+  bytes signature = 4;      // 64 bytes Ed25519
+  bytes verify_key = 5;     // 32 bytes Ed25519 public key
+  bytes pq_signature = 6;   // Optional: Dilithium3 signature (~3293 bytes)
+  bytes pq_verify_key = 7;  // Dilithium3 public key (~1952 bytes)
+}
+
+// Handshake response message
+message HandshakeResp {
+  bytes peer_id = 1;
+  bytes x25519_pk = 2;      // 32 bytes
+  bytes pq_ct = 3;          // Optional: ML-KEM-768 ciphertext (~1088 bytes)
+  bytes signature = 4;      // 64 bytes Ed25519
+  bytes verify_key = 5;     // 32 bytes Ed25519 public key
+  bytes pq_signature = 6;   // Optional: Dilithium3 signature (~3293 bytes)
+  bytes pq_verify_key = 7;  // Dilithium3 public key (~1952 bytes)
+}
+
+// Complete handshake message (wrapper)
+message HandshakeMessage {
+  oneof message {
+    HandshakeInit init = 1;
+    HandshakeResp resp = 2;
+  }
+}

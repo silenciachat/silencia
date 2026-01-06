@@ -1,0 +1,23 @@
+[package]
+name = "silencia-vault"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+silencia-crypto = { path = "../silencia-crypto" }
+zeroize = { workspace = true }
+thiserror = { workspace = true }
+rusqlite = { version = "0.31" }
+libp2p-identity = "0.2"
+chrono = "0.4"
+chacha20poly1305 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rand = { workspace = true }
+argon2 = "0.5"
+base64 = "0.22"
+
+[dev-dependencies]
+uuid = { version = "1.0", features = ["v4"] }

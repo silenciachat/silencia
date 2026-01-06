@@ -1,0 +1,79 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/silencia-net",
+    "crates/silencia-crypto",
+    "crates/silencia-mls",
+    "crates/silencia-zk",
+    "crates/silencia-wire",
+    "crates/silencia-vault",
+    "crates/silencia-sdk",
+    "crates/silencia-identity",
+    "apps/node",
+    "apps/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "AGPL-3.0"
+authors = ["Silencia Contributors"]
+homepage = "https://github.com/senseix21/silencia"
+repository = "https://github.com/senseix21/silencia"
+documentation = "https://github.com/senseix21/silencia/tree/main/docs"
+readme = "README.md"
+keywords = ["cryptography", "post-quantum", "p2p", "privacy", "messaging"]
+categories = ["cryptography", "network-programming"]
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-util = "0.7"
+futures = "0.3"
+
+# Networking
+libp2p = { version = "0.53", features = ["tokio", "tcp", "quic", "dns", "kad", "identify", "ping", "gossipsub", "noise", "yamux", "macros", "request-response"] }
+quinn = "0.11"
+
+# Crypto
+ring = "0.17"
+chacha20poly1305 = "0.10"
+x25519-dalek = "2.0"
+ed25519-dalek = "2.1"
+sha2 = "0.10"
+blake3 = "1.5"
+hkdf = "0.12"
+zeroize = { version = "1.7", features = ["derive"] }
+hpke = "0.11"
+pqcrypto-mlkem = "0.1"
+pqcrypto-mldsa = "0.1"
+pqcrypto-traits = "0.3"
+
+# Serialization
+prost = "0.13"
+prost-types = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utils
+bytes = "1.5"
+rand = "0.8"
+uuid = { version = "1.6", features = ["v4"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 1

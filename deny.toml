@@ -1,0 +1,117 @@
+# cargo-deny configuration  
+# Documentation: https://embarkstudios.github.io/cargo-deny/
+# To run locally: cargo install cargo-deny && cargo deny check
+
+[advisories]
+# Advisory database configuration
+version = 2
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+
+# Ignore specific advisories with documented justification
+ignore = [
+    # RUSTSEC-2025-0137: ruint 1.17.0 - Unsoundness in reciprocal_mg10
+    # Impact: Only affects experimental ZK identity features
+    # Justification: ZK features are marked as experimental stubs in v0.1.0
+    # Will be addressed when implementing real ZK features in v0.2.0
+    "RUSTSEC-2025-0137",
+    
+    # RUSTSEC-2024-0380: pqcrypto-dilithium - Replaced by pqcrypto-mldsa
+    # Impact: Post-quantum signature library
+    # Justification: Will migrate to FIPS 204 ML-DSA in future release
+    "RUSTSEC-2024-0380",
+    
+    # RUSTSEC-2024-0381: pqcrypto-kyber - Replaced by pqcrypto-mlkem
+    # Impact: Post-quantum KEM library
+    # Justification: Will migrate to FIPS 203 ML-KEM in future release
+    "RUSTSEC-2024-0381",
+    
+    # RUSTSEC-2025-0009: ring 0.16.20 - AES panic on overflow
+    # Impact: QUIC header protection (libp2p transitive)
+    # Justification: Will upgrade when libp2p updates to ring 0.17+
+    "RUSTSEC-2025-0009",
+    
+    # RUSTSEC-2025-0010: ring 0.16.20 - Unmaintained
+    # Impact: Transitive via libp2p
+    # Justification: Same as above, waiting for libp2p upgrade
+    "RUSTSEC-2025-0010",
+    
+    # RUSTSEC-2025-0055: tracing-subscriber 0.2.25 - ANSI injection
+    # Impact: Only affects ZK proving system (ark-relations)
+    # Justification: ZK features are experimental, will upgrade in v0.2.0
+    "RUSTSEC-2025-0055",
+    
+    # RUSTSEC-2025-0134: rustls-pemfile - Unmaintained
+    # Impact: Transitive via reqwest (semaphore-rs build dependency)
+    # Justification: Build-only dependency for experimental ZK features
+    "RUSTSEC-2025-0134",
+    
+    # RUSTSEC-2023-0089: atomic-polyfill - Unmaintained
+    # Impact: Transitive via semaphore-rs
+    # Justification: Experimental ZK features only
+    "RUSTSEC-2023-0089",
+    
+    # RUSTSEC-2024-0388: derivative - Unmaintained
+    # Impact: Transitive via ark-* crates (ZK proving)
+    # Justification: Experimental ZK features only
+    "RUSTSEC-2024-0388",
+    
+    # RUSTSEC-2024-0384: instant - Unmaintained
+    # Impact: Transitive via various deps
+    # Justification: Low risk, web-time replacement not needed for desktop
+    "RUSTSEC-2024-0384",
+    
+    # RUSTSEC-2025-0119: number_prefix - Unmaintained
+    # Impact: Transitive via indicatif (CLI progress bars)
+    # Justification: CLI-only, low risk
+    "RUSTSEC-2025-0119",
+    
+    # RUSTSEC-2024-0436: paste - Unmaintained
+    # Impact: Transitive via various macro crates
+    # Justification: Stable macro crate, low risk
+    "RUSTSEC-2024-0436",
+]
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",        # Required for icu_* crates (internationalization)
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Zlib",
+    "0BSD",
+    "OpenSSL",
+    "MPL-2.0",
+    "AGPL-3.0",           # Used by silencia workspace crates
+    "CDLA-Permissive-2.0", # Community Data License Agreement (webpki-root-certs)
+]
+confidence-threshold = 0.8
+
+# Clarification rules (accept on any license match)
+clarify = [
+    { name = "ring", version = "0.16.20", expression = "ISC AND MIT AND OpenSSL", license-files = [ ] }
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+deny = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    "https://github.com/worldcoin/semaphore-rs",
+]

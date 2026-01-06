@@ -1,0 +1,42 @@
+[package]
+name = "silencia-zk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+serde = { workspace = true }
+rand = { workspace = true }
+
+# ZK circuits - using arkworks for groth16
+ark-bn254 = { version = "0.4", optional = true, default-features = false, features = ["curve"] }
+ark-groth16 = { version = "0.4", optional = true, default-features = false }
+ark-relations = { version = "0.4", optional = true, default-features = false }
+ark-r1cs-std = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+ark-ff = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+ark-ec = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+ark-std = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+ark-crypto-primitives = { version = "0.4", optional = true, default-features = false, features = ["r1cs", "std"] }
+ark-serialize = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+ark-snark = { version = "0.4", optional = true, default-features = false }
+
+# Alternative: risc0 for zkVM approach
+risc0-zkvm = { version = "1.0", optional = true }
+
+# Merkle tree
+rs_merkle = "1.4"
+
+# Poseidon hash for efficient ZK
+poseidon-rs = { version = "0.0.10", optional = true }
+
+[features]
+default = []
+arkworks = [
+    "ark-bn254", "ark-groth16", "ark-relations", "ark-r1cs-std",
+    "ark-ff", "ark-ec", "ark-std", "ark-crypto-primitives",
+    "ark-serialize", "ark-snark", "poseidon-rs"
+]
+risc0 = ["risc0-zkvm"]

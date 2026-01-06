@@ -1,0 +1,48 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+*.so
+*.dylib
+*.dll
+
+# Secrets
+*.key
+*.pem
+secrets/
+.env
+.env.local
+
+# Testing
+coverage/
+*.profraw
+*.profdata
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation - exclude all markdown files except main ones
+*.md
+!README.md
+!ROADMAP.md
+!CHANGELOG.md
+!CODE_OF_CONDUCT.md
+!CONTRIBUTING.md
+!SECURITY.md
+!STATUS_REPORT.md
+!THREAT_MODEL.md
+!CONNECTION_APPROVAL.md

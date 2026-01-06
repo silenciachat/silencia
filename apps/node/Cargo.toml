@@ -1,0 +1,13 @@
+[package]
+name = "silencia-node"
+version.workspace = true
+edition.workspace = true
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+
+[dependencies]
+silencia-sdk = { path = "../../crates/silencia-sdk" }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
