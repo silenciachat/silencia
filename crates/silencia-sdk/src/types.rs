@@ -189,7 +189,9 @@ impl IdentityHandle {
     /// List all peer aliases
     ///
     /// Internal helper for `Silencia::list_trusted_peers()`
-    pub(crate) fn list_peers(&self) -> std::result::Result<Vec<String>, silencia_vault::VaultError> {
+    pub(crate) fn list_peers(
+        &self,
+    ) -> std::result::Result<Vec<String>, silencia_vault::VaultError> {
         self.vault.list_peers()
     }
 

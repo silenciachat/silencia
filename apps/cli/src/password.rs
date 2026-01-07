@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use colored::Colorize;
-use silencia_vault::IdentityVault;
 use rusqlite::{params, Connection};
+use silencia_vault::IdentityVault;
 use std::path::Path;
 
 const MAX_ATTEMPTS: usize = 3;

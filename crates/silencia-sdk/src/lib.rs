@@ -51,8 +51,8 @@ pub use types::{
     StoredMessage,
 };
 
-use silencia_net::P2PNode;
 use sha2::{Digest, Sha256};
+use silencia_net::P2PNode;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 /// Production-grade Silencia node with secure-by-default APIs
@@ -512,8 +512,8 @@ impl Silencia {
         vault_path: impl AsRef<std::path::Path>,
         password: impl AsRef<str>,
     ) -> Result<IdentityHandle> {
-        use silencia_vault::IdentityVault;
         use rand::Rng;
+        use silencia_vault::IdentityVault;
 
         let vault_path = vault_path.as_ref();
         let password = password.as_ref();

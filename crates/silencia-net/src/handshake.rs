@@ -40,8 +40,8 @@ pub enum HandshakeEvent {
     Completed {
         peer_id: PeerId,
         session_key: [u8; 32],
-        verify_key: VerifyingKey,
-        pq_verify_key: Vec<u8>, // Dilithium3 verify key
+        verify_key: Box<VerifyingKey>, // Boxed to reduce enum size
+        pq_verify_key: Vec<u8>,        // Dilithium3 verify key
     },
     /// Handshake failed
     Failed { peer_id: PeerId, error: String },
@@ -88,15 +88,16 @@ impl HandshakeBehaviour {
         if self.sessions.is_empty() {
             return "No active sessions".to_string();
         }
-        
+
         let mut summary = format!("Sessions ({}): ", self.sessions.len());
         for (peer_id, state) in self.sessions.iter() {
             let state_str = match state {
                 SessionState::Pending { .. } => "PENDING",
                 SessionState::Established { .. } => "ESTABLISHED",
             };
-            summary.push_str(&format!("{}: {} | ", 
-                peer_id.to_string().chars().take(12).collect::<String>(), 
+            summary.push_str(&format!(
+                "{}: {} | ",
+                peer_id.to_string().chars().take(12).collect::<String>(),
                 state_str
             ));
         }
@@ -178,7 +179,7 @@ impl HandshakeBehaviour {
             Some(SessionState::Established { .. }) => "ESTABLISHED",
             None => "NONE",
         };
-        
+
         info!(
             "📥 Received handshake message from {} ({} bytes) - current state: {}",
             peer_id,
@@ -212,7 +213,10 @@ impl HandshakeBehaviour {
                         peer_id,
                         data: resp_data,
                     });
-                info!("✅ RESP queued successfully, pending_outbound.len() = {}", self.pending_outbound.len());
+                info!(
+                    "✅ RESP queued successfully, pending_outbound.len() = {}",
+                    self.pending_outbound.len()
+                );
             }
             Some(handshake_message::Message::Resp(resp)) => {
                 info!(
@@ -249,7 +253,7 @@ impl HandshakeBehaviour {
                     "⚠️  Simultaneous handshake detected with {} - applying tiebreaker",
                     peer_id
                 );
-                
+
                 // Tiebreaker: Use lexicographic comparison of PeerIDs
                 // Lower PeerID becomes INITIATOR, higher becomes RESPONDER
                 // This ensures both peers agree on roles and derive the same key
@@ -259,9 +263,7 @@ impl HandshakeBehaviour {
                     info!(
                         "🏆 Tiebreaker: We win (our ID < theirs), staying as INITIATOR - ignoring their INIT"
                     );
-                    return Err(format!(
-                        "Simultaneous handshake: we're initiator (tiebreaker)"
-                    ));
+                    return Err("Simultaneous handshake: we're initiator (tiebreaker)".to_string());
                 } else {
                     // They have lower PeerID - they win and become INITIATOR
                     // We become RESPONDER - remove our pending state and process their INIT
@@ -280,7 +282,8 @@ impl HandshakeBehaviour {
                     peer_id
                 );
                 return Err(format!(
-                    "Handshake already established with peer {}", peer_id
+                    "Handshake already established with peer {}",
+                    peer_id
                 ));
             }
             None => {
@@ -319,7 +322,7 @@ impl HandshakeBehaviour {
         self.pending_events.push_back(HandshakeEvent::Completed {
             peer_id,
             session_key,
-            verify_key: peer_key,
+            verify_key: Box::new(peer_key),
             pq_verify_key: crypto_init.pq_verify_key.clone(),
         });
 
@@ -368,7 +371,7 @@ impl HandshakeBehaviour {
         self.pending_events.push_back(HandshakeEvent::Completed {
             peer_id,
             session_key,
-            verify_key: peer_key,
+            verify_key: Box::new(peer_key),
             pq_verify_key: crypto_resp.pq_verify_key.clone(),
         });
 

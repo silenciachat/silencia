@@ -35,7 +35,7 @@
 //! # }
 //! ```
 
-use crate::{Error, Silencia, Result};
+use crate::{Error, Result, Silencia};
 
 /// Trait providing insecure (plaintext) topic-based messaging
 ///

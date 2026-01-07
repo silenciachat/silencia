@@ -1,4 +1,4 @@
-use silencia_sdk::{OutboundMessage, Silencia, Result};
+use silencia_sdk::{OutboundMessage, Result, Silencia};
 use tokio::time::{sleep, Duration};
 
 #[tokio::test]
@@ -503,9 +503,10 @@ async fn test_vault_integration_full_flow() {
     drop(node1);
 
     // 4. Restart node with same vault (should get same peer ID)
-    let mut node2 = Silencia::new_with_vault(&vault_path, "my-secure-password", identity_id, Some(0))
-        .await
-        .unwrap();
+    let mut node2 =
+        Silencia::new_with_vault(&vault_path, "my-secure-password", identity_id, Some(0))
+            .await
+            .unwrap();
 
     let peer_id_2 = node2.peer_id();
 

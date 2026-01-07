@@ -402,7 +402,9 @@ impl ChatSession {
                 println!("  {} BN254 curve (NIST Level 3)", "├─".dimmed());
                 println!("  {} Device-bound, self-sovereign", "└─".dimmed());
             } else {
-                println!("No identity loaded. Create one with: silencia identity create <password>");
+                println!(
+                    "No identity loaded. Create one with: silencia identity create <password>"
+                );
             }
             println!();
             UI::print_prompt(&self.username);

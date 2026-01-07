@@ -18,14 +18,14 @@ where
     let mut len_buf = [0u8; 4];
     io.read_exact(&mut len_buf).await?;
     let len = u32::from_be_bytes(len_buf) as usize;
-    
+
     if len > max_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Message too large: {} > {}", len, max_size),
         ));
     }
-    
+
     // Read message bytes
     let mut buf = vec![0u8; len];
     io.read_exact(&mut buf).await?;
@@ -39,7 +39,7 @@ where
     // Write 4-byte length prefix
     let len = data.len() as u32;
     io.write_all(&len.to_be_bytes()).await?;
-    
+
     // Write message bytes
     io.write_all(data).await?;
     Ok(())
@@ -73,7 +73,7 @@ impl request_response::Codec for HandshakeCodec {
     {
         debug!("📖 Reading handshake request from stream");
         let bytes = read_length_prefixed(io, 1024 * 1024).await?; // Max 1MB
-        
+
         if bytes.is_empty() {
             error!("❌ Received empty handshake request");
             return Err(io::Error::new(
@@ -81,7 +81,7 @@ impl request_response::Codec for HandshakeCodec {
                 "Empty handshake request",
             ));
         }
-        
+
         debug!("✅ Read handshake request: {} bytes", bytes.len());
         Ok(HandshakeRequest(bytes))
     }
@@ -96,7 +96,7 @@ impl request_response::Codec for HandshakeCodec {
     {
         debug!("📖 Reading handshake response from stream");
         let bytes = read_length_prefixed(io, 1024 * 1024).await?; // Max 1MB
-        
+
         if bytes.is_empty() {
             error!("❌ Received empty handshake response");
             return Err(io::Error::new(
@@ -104,7 +104,7 @@ impl request_response::Codec for HandshakeCodec {
                 "Empty handshake response",
             ));
         }
-        
+
         debug!("✅ Read handshake response: {} bytes", bytes.len());
         Ok(HandshakeResponse(bytes))
     }
@@ -145,7 +145,10 @@ impl request_response::Codec for HandshakeCodec {
 /// Create a request-response behaviour for handshakes
 pub fn create_handshake_behaviour() -> request_response::Behaviour<HandshakeCodec> {
     request_response::Behaviour::new(
-        [(StreamProtocol::new(HANDSHAKE_PROTOCOL), ProtocolSupport::Full)],
+        [(
+            StreamProtocol::new(HANDSHAKE_PROTOCOL),
+            ProtocolSupport::Full,
+        )],
         request_response::Config::default()
             .with_request_timeout(std::time::Duration::from_secs(30)),
     )
