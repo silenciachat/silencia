@@ -2,7 +2,7 @@
 
 > Post-quantum secure, peer-to-peer encrypted messaging protocol with zero-knowledge identity verification — built in Rust.
 
-[![Build](https://img.shields.io/github/actions/workflow/status/senseix21/silencia/ci.yml?branch=main)](https://github.com/senseix21/silencia/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/silenciachat/silencia/ci.yml?branch=main)](https://github.com/silenciachat/silencia/actions)
 [![License: AGPL-3.0 / Apache-2.0 / MIT](https://img.shields.io/badge/license-AGPL--3.0%20%7C%20Apache--2.0%20%7C%20MIT-blue)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange)](https://www.rust-lang.org/)
 [![Security Rating](https://img.shields.io/badge/security-A--%20(88%2F100)-brightgreen)](#security)
@@ -87,12 +87,12 @@ silencia/
 ```toml
 # Cargo.toml
 [dependencies]
-silencia-sdk = { git = "https://github.com/senseix21/silencia.git", package = "silencia-sdk" }
+silencia-sdk = { git = "https://github.com/silenciachat/silencia.git", package = "silencia-sdk" }
 ```
 
 **Workspace build**
 ```bash
-git clone https://github.com/senseix21/silencia.git
+git clone https://github.com/silenciachat/silencia.git
 cd silencia
 cargo build --release
 ```
@@ -287,8 +287,8 @@ Special thanks to the Rust cryptography community and NIST for standardizing pos
 ---
 
 ## Contact
-- **Repository**: https://github.com/senseix21/silencia
-- **Issues**: https://github.com/senseix21/silencia/issues
+- **Repository**: https://github.com/silenciachat/silencia
+- **Issues**: https://github.com/silenciachat/silencia/issues
 - **Security**: security@silencia.org (vulnerability reports only)
 
 > Note: Silencia is beta software (v0.8.1) with an A- security rating (88/100). Cryptographic implementation is production-grade; formal third-party audit planned for v1.0.
