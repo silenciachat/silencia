@@ -195,10 +195,6 @@ impl MessageExchange {
         let plaintext = chat_msg.encode_to_vec();
 
         // Sign the plaintext message with hybrid signature
-        eprintln!(
-            "DEBUG: Signing message with our verify key: {:02x?}",
-            &self.session_mgr.public_key().to_bytes()[..8]
-        );
         let hybrid_sig = self
             .session_mgr
             .sign(&plaintext)
@@ -432,11 +428,6 @@ impl MessageExchange {
 
         if let Some(peer_key) = peer_key_opt {
             // Peer key available - perform signature verification
-            eprintln!(
-                "DEBUG: Verifying signature with peer {} key: {:02x?}",
-                peer.to_string().chars().take(12).collect::<String>(),
-                &peer_key.to_bytes()[..8]
-            );
             let peer_pq_key = self.session_mgr.get_peer_pq_key(&peer);
             let policy = self.session_mgr.get_signature_policy(&peer);
 

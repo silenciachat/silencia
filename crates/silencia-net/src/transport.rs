@@ -515,11 +515,6 @@ impl P2PNode {
                                 );
 
                                 // Register peer's verify key for message signature verification
-                                eprintln!(
-                                    "DEBUG: Registering peer {} verify key: {:02x?}",
-                                    peer_id.to_string().chars().take(12).collect::<String>(),
-                                    &verify_key.to_bytes()[..8]
-                                );
                                 self.message_exchange
                                     .session_manager_mut()
                                     .register_peer(peer_id, verify_key);
@@ -534,11 +529,6 @@ impl P2PNode {
                                     .session_manager_mut()
                                     .set_session_key(peer_id, session_key);
 
-                                eprintln!(
-                                    "DEBUG: Session key set for {} - first 8 bytes: {:02x?}",
-                                    peer_id.to_string().chars().take(12).collect::<String>(),
-                                    &session_key[..8]
-                                );
                                 info!(
                                     "🔑 Registered quantum-resistant session key for {}",
                                     peer_id
@@ -655,11 +645,6 @@ impl P2PNode {
                                         }
                                     }
                                     Message::Response { request_id, response } => {
-                                        eprintln!(
-                                            "DEBUG: Received handshake response - {} bytes (req_id: {:?})",
-                                            response.0.len(),
-                                            request_id
-                                        );
                                         info!(
                                             "📥 Received handshake response (req_id: {:?}, {} bytes)",
                                             request_id,
@@ -668,7 +653,6 @@ impl P2PNode {
                                         
                                         // Process the response if it's not just an ACK
                                         if response.0.len() > 10 {
-                                            eprintln!("DEBUG: Processing RESP message...");
                                             if let Err(e) = self.swarm.behaviour_mut().handshake.handle_message(peer, &response.0) {
                                                 tracing::error!("Failed to process handshake response from {}: {}", peer, e);
                                             }

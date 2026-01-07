@@ -195,11 +195,6 @@ impl Handshake {
         // Derive session key from shared secret + transcript
         let session_key = Self::derive_key_with_transcript(&shared_secret, &transcript)?;
 
-        eprintln!(
-            "DEBUG [RESPONDER]: Derived session key (first 8 bytes): {:02x?}",
-            &session_key[..8]
-        );
-
         let hybrid_sig = self.identity.sign(&resp_msg)?;
         let verify_key = self.identity.verifying_key().to_bytes();
         let pq_verify_key = self.identity.pq_verifying_key();
@@ -276,11 +271,6 @@ impl Handshake {
         };
 
         let session_key = Self::derive_key_with_transcript(&shared_secret, &transcript)?;
-
-        eprintln!(
-            "DEBUG [INITIATOR]: Derived session key (first 8 bytes): {:02x?}",
-            &session_key[..8]
-        );
 
         Ok(session_key)
     }

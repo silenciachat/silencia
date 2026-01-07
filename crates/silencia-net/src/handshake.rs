@@ -241,8 +241,6 @@ impl HandshakeBehaviour {
         peer_id: PeerId,
         init: &WireHandshakeInit,
     ) -> Result<Vec<u8>, String> {
-        eprintln!("DEBUG: handle_init called from peer {}", peer_id.to_string().chars().take(12).collect::<String>());
-        
         // RACE CONDITION DETECTION: Check if we're already in PENDING or ESTABLISHED state
         match self.sessions.get(&peer_id) {
             Some(SessionState::Pending { .. }) => {
@@ -335,8 +333,6 @@ impl HandshakeBehaviour {
     }
 
     fn handle_resp(&mut self, peer_id: PeerId, resp: &WireHandshakeResp) -> Result<(), String> {
-        eprintln!("DEBUG: handle_resp called from peer {}", peer_id.to_string().chars().take(12).collect::<String>());
-        
         // Convert from wire format
         let crypto_resp = CryptoHandshakeResp::try_from(resp)
             .map_err(|e| format!("Invalid resp message: {}", e))?;
