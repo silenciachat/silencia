@@ -525,10 +525,6 @@ impl P2PNode {
                                 pq_verify_key,
                             } => {
                                 info!("✅ Quantum-safe handshake completed with {}", peer_id);
-                                eprintln!(
-                                    "\n✅ Secure channel established with {}",
-                                    peer_id.to_string().chars().take(16).collect::<String>()
-                                );
 
                                 // Register peer's verify key for message signature verification
                                 self.message_exchange
@@ -567,7 +563,6 @@ impl P2PNode {
                                         "Auto-approving {} for messaging (handshake complete)",
                                         peer_id
                                     );
-                                    eprintln!("🔓 Ready to exchange messages");
                                     self.message_exchange.approve_peer(peer_id);
                                 } else {
                                     info!("Peer {} handshake complete, but awaiting user approval for messaging", peer_id);
@@ -662,12 +657,6 @@ impl P2PNode {
                                             // Send response
                                             let response_data =
                                                 resp_data.unwrap_or_else(|| vec![1]); // ACK if no RESP
-                                            eprintln!(
-                                                "DEBUG: Sending response to {} - {} bytes (is_resp: {})",
-                                                peer,
-                                                response_data.len(),
-                                                response_data.len() > 10
-                                            );
                                             let _ = self
                                                 .swarm
                                                 .behaviour_mut()

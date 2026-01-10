@@ -73,8 +73,7 @@ impl UI {
 
     pub fn print_section_header(title: &str) {
         println!();
-        println!("{}", format!("▸ {}", title).bright_yellow().bold());
-        println!("{}", "─".repeat(Self::WIDTH).bright_black());
+        println!("{}", format!("[{}]", title).bright_blue());
     }
 
     #[allow(dead_code)]
@@ -90,42 +89,35 @@ impl UI {
     }
 
     pub fn print_spinner(msg: &str) {
-        print!("{} {} ", "◉".yellow().bold(), msg.bright_white());
+        print!("  {} ", msg.dimmed());
         io::stdout().flush().ok();
     }
 
     pub fn print_success(msg: &str) {
-        println!("{} {}", "✓".green().bold(), msg.bright_green());
+        println!("  {}", msg.green());
     }
 
     pub fn print_error(msg: &str) {
-        println!("{} {}", "✗".red().bold(), msg.bright_red());
+        println!("  {}", msg.red());
     }
 
     pub fn print_info(msg: &str) {
-        println!("{} {}", "ℹ".bright_cyan().bold(), msg.bright_cyan());
+        println!("  {}", msg.cyan());
     }
 
     #[allow(dead_code)]
     pub fn print_warning(msg: &str) {
-        println!("{} {}", "⚠".yellow().bold(), msg.yellow());
+        println!("  {}", msg.yellow());
     }
 
     pub fn print_node_info(peer_id: &PeerId, addrs: &[Multiaddr]) {
-        Self::print_section_header("Node Information");
+        Self::print_section_header("node");
 
-        println!(
-            "  {} {}",
-            "Peer ID".bright_cyan().bold(),
-            peer_id.to_string().white()
-        );
+        println!("  peer id: {}", peer_id.to_string().white());
 
         if !addrs.is_empty() {
-            println!();
-            println!("  {}", "Listening on:".bright_cyan().bold());
-            for (i, addr) in addrs.iter().enumerate() {
-                let icon = if i == 0 { "├─" } else { "└─" };
-                println!("    {} {}", icon.dimmed(), addr.to_string().white());
+            for addr in addrs {
+                println!("  {}", addr.to_string().dimmed());
             }
         }
 
@@ -133,52 +125,22 @@ impl UI {
     }
 
     pub fn print_chat_ready() {
-        println!();
-        println!(
-            "{}",
-            "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-                .bright_green()
-                .bold()
-        );
-        println!(
-            "{}",
-            "┃                           READY TO CHAT                               ┃"
-                .bright_white()
-                .bold()
-        );
-        println!(
-            "{}",
-            "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
-                .bright_green()
-                .bold()
-        );
-        println!();
-
-        println!("{}", "  Commands".bright_yellow().bold());
+        Self::print_section_header("commands");
         let commands = [
-            ("/help", "Show help"),
-            ("/connect <addr>", "Connect to peer"),
-            ("/peers", "List connections"),
-            ("/whoami", "Show identity"),
-            ("/clear", "Clear screen"),
-            ("/quit", "Exit"),
+            ("/help", "show help"),
+            ("/connect <addr>", "connect to peer"),
+            ("/peers", "list connections"),
+            ("/whoami", "show identity"),
+            ("/clear", "clear screen"),
+            ("/quit", "exit"),
         ];
 
         for (cmd, desc) in commands {
-            println!(
-                "  {} {} {}",
-                "•".dimmed(),
-                cmd.bright_magenta(),
-                desc.white()
-            );
+            println!("  {} {}", cmd.cyan(), desc.dimmed());
         }
 
         println!();
-        println!(
-            "{}",
-            "  💡 Tip: All messages are encrypted with ML-KEM-768 + ChaCha20-Poly1305"
-                .bright_black()
-        );
+        println!("{}", "  type a message to chat".dimmed());
         println!();
     }
 
@@ -200,9 +162,7 @@ impl UI {
     pub fn print_incoming_message_with_time(sender_username: &str, msg: &str, timestamp: &str) {
         println!(
             "\n{} {} {}",
-            format!("{} [{}]", sender_username, timestamp)
-                .bright_magenta()
-                .bold(),
+            format!("{} {}", sender_username, timestamp).dimmed(),
             "│".dimmed(),
             msg.white()
         );
@@ -226,61 +186,41 @@ impl UI {
     ) {
         println!(
             "\n{} {} {} {}",
-            format!("{} [{}]", sender_username, timestamp)
-                .bright_magenta()
-                .bold(),
-            "✓".bright_green(),
-            format!("[{}]", &identity_id[..8]).dimmed(),
+            format!("{} {}", sender_username, timestamp).dimmed(),
+            "✓".green(),
+            format!("[{}]", &identity_id[..8]).bright_black(),
             msg.white()
         );
     }
 
     pub fn print_decryption_error() {
-        println!(
-            "{} Received encrypted message (decryption failed)",
-            "⚠".yellow().bold()
-        );
+        println!("{}", "  decryption failed".red());
     }
 
     pub fn print_prompt(username: &str) {
-        print!("{} ", format!("{}  ", username).bright_magenta().bold());
+        print!("{} ", format!("{}  ", username).white());
         io::stdout().flush().ok();
     }
 
     pub fn print_help() {
-        Self::print_section_header("Commands");
+        Self::print_section_header("help");
         println!();
 
         let commands = [
-            ("/help", "Show this help message", ""),
-            (
-                "/connect <addr>",
-                "Connect to a peer",
-                "Shorthand: :port:peerID",
-            ),
-            (
-                "/peers",
-                "Show connected peers",
-                "Live connections + saved chats",
-            ),
-            ("/whoami", "Show your identity", "ZK identity ID"),
-            ("/clear", "Clear the screen", ""),
-            ("/quit", "Exit chat", "Also: /exit or Ctrl+C"),
+            ("/help", "show this help message"),
+            ("/connect <addr>", "connect to peer (shorthand: :port:peerID)"),
+            ("/peers", "show connected peers and saved chats"),
+            ("/whoami", "show your zk identity"),
+            ("/clear", "clear screen"),
+            ("/quit", "exit (or ctrl+c)"),
         ];
 
-        for (cmd, desc, hint) in commands {
-            println!("  {}", cmd.bright_magenta().bold());
-            println!("    {} {}", "├─".dimmed(), desc.white());
-            if !hint.is_empty() {
-                println!("    {} {}", "└─".dimmed(), hint.bright_black());
-            }
-            println!();
+        for (cmd, desc) in commands {
+            println!("  {} {}", cmd.cyan(), desc.dimmed());
         }
 
-        println!(
-            "{}",
-            "  💡 Messages are auto-saved and encrypted in your vault".bright_yellow()
-        );
+        println!();
+        println!("{}", "  messages auto-saved and encrypted".dimmed());
         println!();
     }
 
@@ -290,46 +230,27 @@ impl UI {
         connected_peers: Vec<PeerId>,
         saved_conversations: Option<Vec<silencia_vault::Conversation>>,
     ) {
-        Self::print_section_header("Network Status");
+        Self::print_section_header("peers");
         println!();
 
         // Your node
-        println!("{}", "  Your Node".bright_cyan().bold());
-        println!(
-            "  {} {}",
-            "├─ ID:".dimmed(),
-            &peer_id.to_string()[..16].white()
-        );
+        println!("{}", "  you".white());
+        println!("  {}", &peer_id.to_string()[..20].dimmed());
 
         if !addrs.is_empty() {
-            println!("  {} Addresses:", "└─".dimmed());
             for addr in addrs {
-                println!("     {} {}", "•".dimmed(), addr.to_string().bright_black());
+                println!("  {}", addr.to_string().bright_black());
             }
         }
         println!();
 
         // Live connections
-        println!("{}", "  Active Connections".bright_cyan().bold());
+        println!("{}", "  connected".white());
         if connected_peers.is_empty() {
-            println!(
-                "  {} {}",
-                "└─".dimmed(),
-                "None (use /connect to add peers)".bright_black()
-            );
+            println!("{}", "  none".dimmed());
         } else {
-            for (i, peer) in connected_peers.iter().enumerate() {
-                let prefix = if i == connected_peers.len() - 1 {
-                    "└─"
-                } else {
-                    "├─"
-                };
-                println!(
-                    "  {} {} {}",
-                    prefix.dimmed(),
-                    "🟢".green(),
-                    &peer.to_string()[..16].white()
-                );
+            for peer in connected_peers.iter() {
+                println!("  {} {}", "●".green(), &peer.to_string()[..20].white());
             }
         }
         println!();
@@ -337,32 +258,25 @@ impl UI {
         // Saved conversations
         if let Some(conversations) = saved_conversations {
             if !conversations.is_empty() {
-                println!("{}", "  Recent Conversations".bright_cyan().bold());
-                for (i, conv) in conversations.iter().take(5).enumerate() {
-                    let alias = conv.alias.as_deref().unwrap_or("Unknown");
+                println!("{}", "  recent".white());
+                for conv in conversations.iter().take(5) {
+                    let alias = conv.alias.as_deref().unwrap_or("unknown");
                     let time_ago = format_time_ago(conv.last_message_time);
                     let status = if connected_peers
                         .iter()
                         .any(|p| p.to_string() == conv.peer_id)
                     {
-                        "🟢"
+                        "●".green()
                     } else {
-                        "⚪"
-                    };
-                    let prefix = if i == conversations.len().min(5) - 1 {
-                        "└─"
-                    } else {
-                        "├─"
+                        "○".dimmed()
                     };
 
                     println!(
-                        "  {} {} {} {} {} {}",
-                        prefix.dimmed(),
+                        "  {} {} {} {}",
                         status,
-                        alias.bright_white(),
-                        format!("({} msgs)", conv.message_count).dimmed(),
-                        "•".dimmed(),
-                        time_ago.bright_black()
+                        alias.white(),
+                        format!("{} msgs", conv.message_count).bright_black(),
+                        time_ago.dimmed()
                     );
                 }
                 println!();
@@ -373,43 +287,31 @@ impl UI {
     #[allow(dead_code)]
     pub fn print_connection_request(peer_id: &PeerId) {
         println!();
-        println!(
-            "{}",
-            "┌─ Incoming Connection ─────────────────────────────────────────┐".bright_yellow()
-        );
-        println!("│ {}", peer_id.to_string().white());
-        println!(
-            "{}",
-            "└───────────────────────────────────────────────────────────────┘".bright_yellow()
-        );
-        print!("  {} ", "Accept? [y/n]:".bright_yellow());
+        println!("{}", "  incoming connection".yellow());
+        println!("  {}", peer_id.to_string().white());
+        print!("  {} ", "accept? [y/n]".dimmed());
         io::stdout().flush().ok();
     }
 
     pub fn print_identity_info(identity_id: &[u8; 32], created: bool) {
-        Self::print_section_header("Identity");
+        Self::print_section_header("identity");
 
         if created {
-            println!("  {} Created new ZK identity", "✓".green().bold());
+            println!("  {}", "created new zk identity".green());
         } else {
-            println!("  {} Loaded existing identity", "✓".green().bold());
+            println!("  {}", "loaded identity".green());
         }
 
-        println!(
-            "  {} {}",
-            "├─ ID:".dimmed(),
-            hex::encode(&identity_id[..8]).white()
-        );
-        println!("  {} Groth16 proof system", "├─".dimmed());
-        println!("  {} BN254 curve (NIST Level 3)", "└─".dimmed());
+        println!("  id: {}", hex::encode(&identity_id[..8]).white());
+        println!("  {}", "groth16 bn254".dimmed());
         println!();
     }
 
     pub fn print_vault_status(path: &str, created: bool) {
         if created {
-            Self::print_success(&format!("Vault created: {}", path));
+            Self::print_success(&format!("vault created: {}", path));
         } else {
-            Self::print_success("Vault unlocked");
+            Self::print_success("vault unlocked");
         }
     }
 
@@ -418,17 +320,12 @@ impl UI {
             return;
         }
 
-        Self::print_section_header("Recent Chats");
+        Self::print_section_header("recent");
         println!();
 
-        for (i, conv) in conversations.iter().take(10).enumerate() {
-            let alias = conv.alias.as_deref().unwrap_or("Unknown");
+        for conv in conversations.iter().take(10) {
+            let alias = conv.alias.as_deref().unwrap_or("unknown");
             let time_ago = format_time_ago(conv.last_message_time);
-            let prefix = if i == conversations.len().min(10) - 1 {
-                "└─"
-            } else {
-                "├─"
-            };
 
             let preview = conv
                 .last_message
@@ -441,22 +338,19 @@ impl UI {
                     };
                     truncated
                 })
-                .unwrap_or_else(|| "No messages".to_string());
+                .unwrap_or_else(|| "no messages".to_string());
 
             println!(
-                "  {} {} {} ",
-                prefix.dimmed(),
-                alias.bright_white().bold(),
-                format!("({} msgs • {})", conv.message_count, time_ago).dimmed()
+                "  {} {} {}",
+                alias.white(),
+                format!("{} msgs", conv.message_count).bright_black(),
+                time_ago.dimmed()
             );
-            println!("      {}", preview.bright_black());
+            println!("  {}", preview.dimmed());
         }
 
         println!();
-        println!(
-            "  {} Use /connect :port:peerID to reconnect",
-            "💡".bright_yellow()
-        );
+        println!("{}", "  /connect :port:peerID to reconnect".dimmed());
         println!();
     }
 
@@ -467,42 +361,8 @@ impl UI {
 
     pub fn print_goodbye() {
         println!();
-        println!(
-            "{}",
-            "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-                .bright_magenta()
-        );
-        println!(
-            "{}",
-            "┃                                                                        ┃"
-                .bright_magenta()
-        );
-        println!(
-            "{}",
-            "┃                             Goodbye!                                   ┃"
-                .bright_white()
-                .bold()
-        );
-        println!(
-            "{}",
-            "┃                                                                        ┃"
-                .bright_magenta()
-        );
-        println!(
-            "{}",
-            "┃                  Your messages are safe and encrypted.                 ┃"
-                .bright_white()
-        );
-        println!(
-            "{}",
-            "┃                                                                        ┃"
-                .bright_magenta()
-        );
-        println!(
-            "{}",
-            "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
-                .bright_magenta()
-        );
+        println!("{}", "  goodbye".white());
+        println!("{}", "  messages saved and encrypted".dimmed());
         println!();
     }
 
@@ -532,39 +392,28 @@ impl UI {
 
     /// Project info (for /info command)
     pub fn print_project_info() {
-        Self::print_section_header("Silencia Project Info");
+        Self::print_section_header("info");
         println!();
 
-        println!("{}", "  Version & Protocol".bright_cyan().bold());
-        println!("  {} v0.8.1", "├─".dimmed());
-        println!("  {} libp2p + QUIC transport", "├─".dimmed());
-        println!("  {} AGPL-3.0 License", "└─".dimmed());
+        println!("{}", "  version".white());
+        println!("  v0.8.1 • libp2p + quic • agpl-3.0");
         println!();
 
-        println!("{}", "  Cryptography".bright_cyan().bold());
-        println!("  {} ML-KEM-768 + X25519 (hybrid KEM)", "├─".dimmed());
-        println!(
-            "  {} Dilithium3 + Ed25519 (hybrid signatures)",
-            "├─".dimmed()
-        );
-        println!("  {} ChaCha20-Poly1305 (AEAD)", "├─".dimmed());
-        println!("  {} Groth16 SNARKs (ZK identity)", "└─".dimmed());
+        println!("{}", "  crypto".white());
+        println!("  ml-kem-768 + x25519");
+        println!("  dilithium3 + ed25519");
+        println!("  chacha20-poly1305");
+        println!("  groth16 bn254");
         println!();
 
-        println!("{}", "  Privacy Features".bright_cyan().bold());
-        println!("  {} End-to-end encryption", "✓".green());
-        println!("  {} Perfect forward secrecy", "✓".green());
-        println!("  {} Zero-knowledge identity", "✓".green());
-        println!("  {} Metadata protection", "✓".green());
-        println!("  {} No central servers", "✓".green());
+        println!("{}", "  privacy".white());
+        println!("  {} e2e encryption", "✓".green());
+        println!("  {} forward secrecy", "✓".green());
+        println!("  {} zk identity", "✓".green());
+        println!("  {} no servers", "✓".green());
         println!();
 
-        println!("{}", "  Learn More".bright_cyan().bold());
-        println!(
-            "  {} https://github.com/senseix21/silencia",
-            "Repository:".dimmed()
-        );
-        println!("  {} See README.md and docs/", "Docs:".dimmed());
+        println!("{}", "  https://github.com/senseix21/silencia".dimmed());
         println!();
     }
 }
