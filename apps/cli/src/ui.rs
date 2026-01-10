@@ -30,16 +30,6 @@ impl UI {
         
         println!();
         
-        // Glitch effect colors
-        let colors = [
-            Color::Magenta,
-            Color::Cyan,
-            Color::Yellow,
-            Color::Green,
-            Color::Blue,
-            Color::Magenta,
-        ];
-        
         let lines = [
             "███████╗██╗██╗     ███████╗███╗   ██╗ ██████╗██╗ █████╗ ",
             "██╔════╝██║██║     ██╔════╝████╗  ██║██╔════╝██║██╔══██╗",
@@ -49,36 +39,32 @@ impl UI {
             "╚══════╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝╚═╝  ╚═╝",
         ];
         
-        // Rainbow wave animation
-        for (idx, line) in lines.iter().enumerate() {
+        // Cyber green wave animation
+        for line in lines.iter() {
             let chars: Vec<char> = line.chars().collect();
             for i in 0..chars.len() {
                 let segment = chars[..=i].iter().collect::<String>();
-                print!("\r{}", segment.color(colors[idx]));
+                print!("\r{}", segment.truecolor(0, 255, 65)); // Cyber green
                 io::stdout().flush().ok();
-                thread::sleep(Duration::from_micros(2500));
+                thread::sleep(Duration::from_micros(2000));
             }
             println!();
         }
         
         println!();
         
-        // Glitch effect subtitle
+        // Glitch effect subtitle - green theme
         let subtitle = "⚡ post-quantum • peer-to-peer • encrypted ⚡";
-        print!("{}", subtitle.bright_magenta().bold());
+        print!("{}", subtitle.truecolor(0, 255, 65).bold());
         io::stdout().flush().ok();
-        thread::sleep(Duration::from_millis(80));
-        print!("\r{}", subtitle.bright_cyan().bold());
+        thread::sleep(Duration::from_millis(100));
+        print!("\r{}", subtitle.truecolor(100, 255, 100).bold());
         io::stdout().flush().ok();
-        thread::sleep(Duration::from_millis(80));
-        print!("\r{}", subtitle.bright_yellow().bold());
-        io::stdout().flush().ok();
-        thread::sleep(Duration::from_millis(80));
-        print!("\r{}", " ".repeat(subtitle.len()));
-        print!("\r{}", subtitle.truecolor(138, 201, 38)); // Neon green
+        thread::sleep(Duration::from_millis(100));
+        print!("\r{}", subtitle.truecolor(0, 255, 65).bold());
         
         println!();
-        println!("{}", "         v0.8.1 • built different 🔥".dimmed());
+        println!("{}", "         v0.8.1 • matrix mode 🟢".truecolor(0, 200, 50));
         println!();
     }
 
@@ -94,8 +80,8 @@ impl UI {
             "info" => "ℹ️",
             _ => "▸",
         };
-        println!("{} {}", emoji, title.truecolor(138, 201, 38).bold());
-        println!("{}", "  ─".repeat(20).truecolor(75, 75, 75));
+        println!("{} {}", emoji, title.truecolor(0, 255, 65).bold());
+        println!("{}", "  ─".repeat(20).truecolor(0, 100, 30));
     }
 
     #[allow(dead_code)]
@@ -111,12 +97,12 @@ impl UI {
     }
 
     pub fn print_spinner(msg: &str) {
-        print!("  {} {} ", "⚡".bright_yellow(), msg.truecolor(138, 201, 38));
+        print!("  {} {} ", "⚡".bright_yellow(), msg.truecolor(0, 255, 65));
         io::stdout().flush().ok();
     }
 
     pub fn print_success(msg: &str) {
-        println!("  {} {}", "✓".truecolor(138, 201, 38).bold(), msg.bright_green());
+        println!("  {} {}", "✓".truecolor(0, 255, 65).bold(), msg.bright_green());
     }
 
     pub fn print_error(msg: &str) {
@@ -135,11 +121,11 @@ impl UI {
     pub fn print_node_info(peer_id: &PeerId, addrs: &[Multiaddr]) {
         Self::print_section_header("node");
 
-        println!("  {} {}", "id:".truecolor(138, 201, 38), peer_id.to_string().bright_white());
+        println!("  {} {}", "id:".truecolor(0, 255, 65), peer_id.to_string().bright_white());
 
         if !addrs.is_empty() {
             for addr in addrs {
-                println!("  {} {}", "↳".dimmed(), addr.to_string().truecolor(75, 75, 75));
+                println!("  {} {}", "↳".truecolor(0, 100, 30), addr.to_string().truecolor(75, 75, 75));
             }
         }
 
@@ -161,14 +147,14 @@ impl UI {
             println!(
                 "  {} {} {} {}", 
                 emoji,
-                format!("/{}", cmd).truecolor(255, 0, 255),
-                "→".dimmed(),
-                desc.truecolor(138, 201, 38)
+                format!("/{}", cmd).truecolor(0, 255, 65),
+                "→".truecolor(0, 100, 30),
+                desc.truecolor(100, 255, 100)
             );
         }
 
         println!();
-        println!("{}", "  ⚡ ready to chat • fully encrypted ⚡".truecolor(138, 201, 38));
+        println!("{}", "  ⚡ ready to chat • fully encrypted ⚡".truecolor(0, 255, 65));
         println!();
     }
 
@@ -190,9 +176,9 @@ impl UI {
     pub fn print_incoming_message_with_time(sender_username: &str, msg: &str, timestamp: &str) {
         println!(
             "\n{} {} {} {}",
-            "◀".truecolor(138, 201, 38),
-            sender_username.truecolor(255, 0, 255).bold(),
-            timestamp.dimmed(),
+            "◀".truecolor(0, 255, 65),
+            sender_username.truecolor(0, 255, 65).bold(),
+            timestamp.truecolor(0, 100, 30),
             msg.bright_white()
         );
     }
@@ -215,11 +201,11 @@ impl UI {
     ) {
         println!(
             "\n{} {} {} {} {} {}",
-            "◀".truecolor(138, 201, 38),
-            sender_username.truecolor(255, 0, 255).bold(),
-            "✓".truecolor(138, 201, 38),
-            format!("[{}]", &identity_id[..8]).truecolor(0, 255, 255),
-            timestamp.dimmed(),
+            "◀".truecolor(0, 255, 65),
+            sender_username.truecolor(0, 255, 65).bold(),
+            "✓".truecolor(0, 255, 65),
+            format!("[{}]", &identity_id[..8]).truecolor(100, 255, 100),
+            timestamp.truecolor(0, 100, 30),
             msg.bright_white()
         );
     }
@@ -229,7 +215,7 @@ impl UI {
     }
 
     pub fn print_prompt(username: &str) {
-        print!("{} ", format!("{}  ▶", username).truecolor(255, 0, 255).bold());
+        print!("{} ", format!("{}  ▶", username).truecolor(0, 255, 65).bold());
         io::stdout().flush().ok();
     }
 
@@ -265,23 +251,23 @@ impl UI {
         println!();
 
         // Your node
-        println!("{} {}", "you".truecolor(138, 201, 38).bold(), "↓".dimmed());
+        println!("{} {}", "you".truecolor(0, 255, 65).bold(), "↓".truecolor(0, 100, 30));
         println!("  {}", &peer_id.to_string()[..20].truecolor(75, 75, 75));
 
         if !addrs.is_empty() {
             for addr in addrs {
-                println!("  {} {}", "↳".dimmed(), addr.to_string().truecolor(75, 75, 75));
+                println!("  {} {}", "↳".truecolor(0, 100, 30), addr.to_string().truecolor(75, 75, 75));
             }
         }
         println!();
 
         // Live connections
-        println!("{} {}", "connected".truecolor(138, 201, 38).bold(), "↓".dimmed());
+        println!("{} {}", "connected".truecolor(0, 255, 65).bold(), "↓".truecolor(0, 100, 30));
         if connected_peers.is_empty() {
             println!("{}", "  none • use /connect".dimmed());
         } else {
             for peer in connected_peers.iter() {
-                println!("  {} {}", "●".truecolor(138, 201, 38), &peer.to_string()[..20].bright_white());
+                println!("  {} {}", "●".truecolor(0, 255, 65), &peer.to_string()[..20].bright_white());
             }
         }
         println!();
@@ -289,7 +275,7 @@ impl UI {
         // Saved conversations
         if let Some(conversations) = saved_conversations {
             if !conversations.is_empty() {
-                println!("{} {}", "recent".truecolor(138, 201, 38).bold(), "↓".dimmed());
+                println!("{} {}", "recent".truecolor(0, 255, 65).bold(), "↓".truecolor(0, 100, 30));
                 for conv in conversations.iter().take(5) {
                     let alias = conv.alias.as_deref().unwrap_or("unknown");
                     let time_ago = format_time_ago(conv.last_message_time);
@@ -297,7 +283,7 @@ impl UI {
                         .iter()
                         .any(|p| p.to_string() == conv.peer_id)
                     {
-                        "●".truecolor(138, 201, 38)
+                        "●".truecolor(0, 255, 65)
                     } else {
                         "○".dimmed()
                     };
@@ -305,9 +291,9 @@ impl UI {
                     println!(
                         "  {} {} {} {}",
                         status,
-                        alias.truecolor(255, 0, 255),
+                        alias.truecolor(0, 255, 65),
                         format!("{} msgs", conv.message_count).truecolor(75, 75, 75),
-                        time_ago.dimmed()
+                        time_ago.truecolor(0, 100, 30)
                     );
                 }
                 println!();
@@ -328,13 +314,13 @@ impl UI {
         Self::print_section_header("identity");
 
         if created {
-            println!("  {} {}", "✓".truecolor(138, 201, 38), "new zk identity created".bright_green());
+            println!("  {} {}", "✓".truecolor(0, 255, 65), "new zk identity created".bright_green());
         } else {
-            println!("  {} {}", "✓".truecolor(138, 201, 38), "identity loaded".bright_green());
+            println!("  {} {}", "✓".truecolor(0, 255, 65), "identity loaded".bright_green());
         }
 
-        println!("  {} {}", "id:".truecolor(138, 201, 38), hex::encode(&identity_id[..8]).truecolor(0, 255, 255));
-        println!("  {} {}", "zk:".truecolor(138, 201, 38), "groth16 • bn254".dimmed());
+        println!("  {} {}", "id:".truecolor(0, 255, 65), hex::encode(&identity_id[..8]).truecolor(100, 255, 100));
+        println!("  {} {}", "zk:".truecolor(0, 255, 65), "groth16 • bn254".truecolor(0, 100, 30));
         println!();
     }
 
@@ -392,8 +378,8 @@ impl UI {
 
     pub fn print_goodbye() {
         println!();
-        println!("{}", "  👋 goodbye".truecolor(255, 0, 255).bold());
-        println!("{}", "  🔒 messages saved • encrypted".dimmed());
+        println!("{}", "  👋 goodbye".truecolor(0, 255, 65).bold());
+        println!("{}", "  🔒 messages saved • encrypted".truecolor(0, 100, 30));
         println!();
     }
 
