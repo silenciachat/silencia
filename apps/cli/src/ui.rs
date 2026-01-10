@@ -25,49 +25,44 @@ impl UI {
     const WIDTH: usize = 72;
 
     pub fn print_banner() {
+        use std::thread;
+        use std::time::Duration;
+        
         println!();
-        // ASCII art banner
-        println!(
-            "{}",
-            "███████╗██╗██╗     ███████╗███╗   ██╗ ██████╗██╗ █████╗ "
-                .bright_cyan()
-                .bold()
-        );
-        println!(
-            "{}",
-            "██╔════╝██║██║     ██╔════╝████╗  ██║██╔════╝██║██╔══██╗"
-                .bright_cyan()
-                .bold()
-        );
-        println!(
-            "{}",
-            "███████╗██║██║     █████╗  ██╔██╗ ██║██║     ██║███████║"
-                .bright_cyan()
-                .bold()
-        );
-        println!(
-            "{}",
-            "╚════██║██║██║     ██╔══╝  ██║╚██╗██║██║     ██║██╔══██║"
-                .bright_cyan()
-                .bold()
-        );
-        println!(
-            "{}",
-            "███████║██║███████╗███████╗██║ ╚████║╚██████╗██║██║  ██║"
-                .bright_cyan()
-                .bold()
-        );
-        println!(
-            "{}",
-            "╚══════╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝╚═╝  ╚═╝"
-                .bright_cyan()
-                .bold()
-        );
+        
+        let lines = [
+            "███████╗██╗██╗     ███████╗███╗   ██╗ ██████╗██╗ █████╗ ",
+            "██╔════╝██║██║     ██╔════╝████╗  ██║██╔════╝██║██╔══██╗",
+            "███████╗██║██║     █████╗  ██╔██╗ ██║██║     ██║███████║",
+            "╚════██║██║██║     ██╔══╝  ██║╚██╗██║██║     ██║██╔══██║",
+            "███████║██║███████╗███████╗██║ ╚████║╚██████╗██║██║  ██║",
+            "╚══════╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝╚═╝  ╚═╝",
+        ];
+        
+        // Wave animation - reveal character by character
+        for line in &lines {
+            let chars: Vec<char> = line.chars().collect();
+            for i in 0..chars.len() {
+                print!("\r{}", chars[..=i].iter().collect::<String>().bright_cyan().bold());
+                io::stdout().flush().ok();
+                thread::sleep(Duration::from_micros(3000));
+            }
+            println!();
+        }
+        
         println!();
-        println!(
-            "{}",
-            "     Post-quantum private P2P chat • v0.8.1".bright_white()
-        );
+        
+        // Fade in subtitle with typing effect
+        let subtitle = "     Post-quantum private P2P chat • v0.8.1";
+        for (i, ch) in subtitle.chars().enumerate() {
+            print!("{}", ch.to_string().bright_white());
+            io::stdout().flush().ok();
+            if i < subtitle.len() - 1 {
+                thread::sleep(Duration::from_millis(15));
+            }
+        }
+        
+        println!();
         println!();
     }
 
