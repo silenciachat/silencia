@@ -236,7 +236,7 @@ async fn start_chat(
 
     // Subscribe to topic
     node.subscribe(&topic)?;
-    UI::print_success(&format!("Subscribed to: {}", topic));
+    // UI::print_success(&format!("Subscribed to: {}", topic));
 
     // Connect to peer if specified
     if let Some(peer_addr) = connect {
